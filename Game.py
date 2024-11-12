@@ -6,153 +6,154 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
-API_TOKEN = '7886760486:AAGxkEkApKcxksz1cqOaEUivvHrXzb8dNW4'
+API_TOKEN = 'YOUR_API_TOKEN_HERE'
 
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
-class Game(StatesGroup):
-    waiting_for_start = State()
-    waiting_for_guess = State()
-    waiting_for_restart = State()
+class GameStates(StatesGroup):
+    choosing_weapon = State()
+    choosing_armor = State()
+    choosing_transport = State()
+    choosing_path = State()
+    fighting_dragon = State()
+    end_game = State()
 
-# Код самой игры
 class GameLogic:
     def __init__(self):
         self.weapon = None
         self.armor = None
         self.transport = None
-        self.path = None
         self.dragon_health = 100
         self.alive = True
-
-    def choose_weapon(self):
-        return "Выберите оружие:\n1. Меч\n2. Палка\n3. Пулемет"
-
-    def choose_armor(self):
-        return "Выберите броню:\n1. Полный латный доспех\n2. Костюм-тройка\n3. Дырявые трусы и носки"
-
-    def choose_transport(self):
-        return "Выберите транспорт:\n1. Ковер-самолет\n2. Ослик Иа\n3. Пешком"
-
-    def choose_path(self):
-        descriptions = {
-            "1": "Вы уперлись в скалы.",
-            "2": "Вы увязли в болоте.",
-            "4": "Вы вернулись назад и потеряли много времени.",
-            "5": "Вы запутались в кустах."
-        }
-        return "Выберите направление:\n1. Направо\n2. Налево\n3. Прямо\n4. Назад\n5. По диагонали"
-
-    def fight_dragon(self):
-        return "В бой с драконом!"
 
     def reset_game(self):
         self.weapon = None
         self.armor = None
         self.transport = None
-        self.path = None
         self.dragon_health = 100
         self.alive = True
 
-# Команды бота
-@dp.message_handler(commands=['start'])
-async def cmd_start(message: types.Message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    start_button = types.KeyboardButton('Старт')
-    cancel_button = types.KeyboardButton('Отмена')
-    markup.add(start_button, cancel_button)
-    
-    await message.answer("Привет! Добро пожаловать в игру. Чтобы начать, нажми 'Старт'. Чтобы выйти, нажми 'Отмена'.", reply_markup=markup)
-    await Game.waiting_for_start.set()
+game = GameLogic()
 
-@dp.message_handler(lambda message: message.text == 'Старт', state=Game.waiting_for_start)
-async def game_start(message: types.Message, state: FSMContext):
-    await message.answer("Игра начинается! Давайте выберем ваше оружие. " + game.choose_weapon())
-    await Game.waiting_for_guess.set()
+@dp.message_handler(commands='start')
+async def start_game(message: types.Message):
+    game.reset_game()
+    await message.reply("Добро пожаловать в игру 'Рыцарь спасает принцессу от дракона'! Выберите оружие:", 
+                        reply_markup=weapon_keyboard())
+    await GameStates.choosing_weapon.set()
 
-@dp.message_handler(lambda message: message.text == 'Отмена', state=Game.waiting_for_start)
-async def cancel_game(message: types.Message, state: FSMContext):
-    await message.answer("Игра отменена.")
-    await state.finish()
+def weapon_keyboard():
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("1. Меч", "2. Палка", "3. Пулемет")
+    return keyboard
 
-# Обработчики для выбора оружия, брони, транспорта и пути
-@dp.message_handler(lambda message: message.text in ['1', '2', '3'], state=Game.waiting_for_guess)
-async def process_guess(message: types.Message, state: FSMContext):
-    game = GameLogic()
+def armor_keyboard():
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("1. Полный латный доспех", "2. Костюм-тройка", "3. Дырявые трусы и носки")
+    return keyboard
+
+def transport_keyboard():
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("1. Ковер-самолет", "2. Ослик Иа", "3. Пешком")
+    return keyboard
+
+@dp.message_handler(state=GameStates.choosing_weapon)
+async def choose_weapon(message: types.Message, state: FSMContext):
     choice = message.text
-    if choice == '1':
+    if choice == "1. Меч":
         game.weapon = "Меч"
-    elif choice == '2':
+    elif choice == "2. Палка":
         game.weapon = "Палка"
-    elif choice == '3':
+    elif choice == "3. Пулемет":
         game.weapon = "Пулемет"
-    
-    await message.answer(game.choose_armor())
-    await Game.waiting_for_guess.set()
-
-# После выбора брони
-@dp.message_handler(lambda message: message.text in ['1', '2', '3'], state=Game.waiting_for_guess)
-async def process_armor(message: types.Message, state: FSMContext):
-    game = GameLogic()
-    choice = message.text
-    if choice == '1':
-        game.armor = "Полный латный доспех"
-    elif choice == '2':
-        game.armor = "Костюм-тройка"
-    elif choice == '3':
-        game.armor = "Дырявые трусы и носки"
-    
-    await message.answer(game.choose_transport())
-    await Game.waiting_for_guess.set()
-
-# После выбора транспорта
-@dp.message_handler(lambda message: message.text in ['1', '2', '3'], state=Game.waiting_for_guess)
-async def process_transport(message: types.Message, state: FSMContext):
-    game = GameLogic()
-    choice = message.text
-    if choice == '1':
-        game.transport = "Ковер-самолет"
-    elif choice == '2':
-        game.transport = "Ослик Иа"
-    elif choice == '3':
-        game.transport = "Пешком"
-    
-    await message.answer(game.choose_path())
-    await Game.waiting_for_guess.set()
-
-# После выбора пути
-@dp.message_handler(lambda message: message.text in ['1', '2', '3', '4', '5'], state=Game.waiting_for_guess)
-async def process_path(message: types.Message, state: FSMContext):
-    game = GameLogic()
-    choice = message.text
-    game.path = "Прямо"
-    await message.answer(game.fight_dragon())
-    await Game.waiting_for_restart.set()
-
-# Завершение игры
-@dp.message_handler(lambda message: message.text in ['Да', 'Нет'], state=Game.waiting_for_restart)
-async def process_restart(message: types.Message, state: FSMContext):
-    if message.text == 'Да':
-        game.reset_game()
-        await message.answer("Игра начинается заново!")
-        await cmd_start(message)
     else:
-        await message.answer("Спасибо за игру!")
-        await state.finish()
+        await message.reply("Неправильный выбор. Пожалуйста, выберите оружие снова:", reply_markup=weapon_keyboard())
+        return
 
-# Обработчик для окончания игры
-@dp.message_handler(state=Game.waiting_for_restart)
-async def end_game(message: types.Message, state: FSMContext):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    yes_button = types.KeyboardButton('Да')
-    no_button = types.KeyboardButton('Нет')
-    markup.add(yes_button, no_button)
+    await message.reply(f"Вы выбрали: {game.weapon}. Теперь выберите броню:", reply_markup=armor_keyboard())
+    await GameStates.choosing_armor.set()
 
-    await message.answer("Игра окончена. Хотите сыграть снова?", reply_markup=markup)
-    await Game.waiting_for_restart.set()
+@dp.message_handler(state=GameStates.choosing_armor)
+async def choose_armor(message: types.Message, state: FSMContext):
+    choice = message.text
+    if choice == "1. Полный латный доспех":
+        game.armor = "Полный латный доспех"
+    elif choice == "2. Костюм-тройка":
+        game.armor = "Костюм-тройка"
+    elif choice == "3. Дырявые трусы и носки":
+        game.armor = "Дырявые трусы и носки"
+    else:
+        await message.reply("Неправильный выбор. Пожалуйста, выберите броню снова:", reply_markup=armor_keyboard())
+        return
+
+    await message.reply(f"Вы выбрали: {game.armor}. Теперь выберите транспорт:", reply_markup=transport_keyboard())
+    await GameStates.choosing_transport.set()
+
+@dp.message_handler(state=GameStates.choosing_transport)
+async def choose_transport(message: types.Message, state: FSMContext):
+    choice = message.text
+    if choice == "1. Ковер-самолет":
+        game.transport = "Ковер-самолет"
+    elif choice == "2. Ослик Иа":
+        game.transport = "Ослик Иа"
+    elif choice == "3. Пешком":
+        game.transport = "Пешком"
+    else:
+        await message.reply("Неправильный выбор. Пожалуйста, выберите транспорт снова:", reply_markup=transport_keyboard())
+        return
+
+    await message.reply(f"Вы выбрали: {game.transport}. Теперь отправляемся в путь!")
+    await GameStates.choosing_path.set()
+
+@dp.message_handler(state=GameStates.choosing_path)
+async def choose_path(message: types.Message, state: FSMContext):
+    descriptions = {
+        "1": "Вы уперлись в скалы.",
+        "2": "Вы увязли в болоте.",
+        "4": "Вы вернулись назад и потеряли много времени.",
+        "5": "Вы запутались в кустах."
+    }
+    correct_direction = str(random.choice([1, 2, 3]))
+    choice = message.text
+
+    if choice == correct_direction:
+        await message.reply("Вы выбрали верное направление и добрались до замка дракона!")
+        await GameStates.fighting_dragon.set()
+        await fight_dragon(message)
+    else:
+        await message.reply(descriptions.get(choice, "Неправильное направление. Попробуйте снова."))
+
+async def fight_dragon(message: types.Message):
+    if game.weapon == "Пулемет" and game.armor == "Полный латный доспех":
+        await message.reply("Дракон испугался и убежал без боя! Вы выиграли!")
+    elif game.weapon == "Палка" and game.armor == "Дырявые трусы и носки":
+        await message.reply("Дракон умирает от смеха при виде вашего снаряжения! Вы выиграли!")
+    else:
+        await message.reply("Вы вступаете в бой с драконом!")
+        game.dragon_health -= 50
+        if game.dragon_health <= 0:
+            await message.reply("Вы победили дракона!")
+        else:
+            await message.reply("Дракон победил вас.")
+    await end_game(message)
+
+async def end_game(message: types.Message):
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("Да", "Нет")
+    await message.reply("Хотите сыграть снова?", reply_markup=keyboard)
+    await GameStates.end_game.set()
+
+@dp.message_handler(lambda message: message.text.lower() == "да", state=GameStates.end_game)
+async def restart_game(message: types.Message, state: FSMContext):
+    await start_game(message)
+
+@dp.message_handler(lambda message: message.text.lower() == "нет", state=GameStates.end_game)
+async def stop_game(message: types.Message, state: FSMContext):
+    await state.finish()
+    await message.reply("Спасибо за игру!", reply_markup=types.ReplyKeyboardRemove())
 
 if __name__ == '__main__':
-    game = GameLogic()
     executor.start_polling(dp, skip_updates=True)
+# 3 version
