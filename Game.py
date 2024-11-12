@@ -1,110 +1,55 @@
-import os
-import random
-from aiogram import Bot, Dispatcher, types
-from aiogram.utils import executor
-from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.dispatcher import FSMContext
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-
-API_TOKEN = '7886760486:AAGxkEkApKcxksz1cqOaEUivvHrXzb8dNW4'
-
-bot = Bot(token=API_TOKEN)
-storage = MemoryStorage()
-dp = Dispatcher(bot, storage=storage)
-
-class GameStates(StatesGroup):
-    choosing_weapon = State()
-    choosing_armor = State()
-    choosing_transport = State()
-    choosing_path = State()
-    fighting_dragon = State()
-    end_game = State()
-
-class GameLogic:
-    def __init__(self):
-        self.weapon = None
-        self.armor = None
-        self.transport = None
-        self.dragon_health = 100
-        self.alive = True
-
-    def reset_game(self):
-        self.weapon = None
-        self.armor = None
-        self.transport = None
-        self.dragon_health = 100
-        self.alive = True
-
-game = GameLogic()
-
 @dp.message_handler(commands='start')
 async def start_game(message: types.Message):
     game.reset_game()
-    await message.reply("Добро пожаловать в игру 'Рыцарь спасает принцессу от дракона'! Выберите оружие:", 
-                        reply_markup=weapon_keyboard())
+    await message.reply("Добро пожаловать в игру 'Рыцарь спасает принцессу от дракона'! Введите номер, чтобы выбрать оружие:\n1. Меч\n2. Палка\n3. Пулемет")
     await GameStates.choosing_weapon.set()
-
-def weapon_keyboard():
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add("1. Меч", "2. Палка", "3. Пулемет")
-    return keyboard
-
-def armor_keyboard():
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add("1. Полный латный доспех", "2. Костюм-тройка", "3. Дырявые трусы и носки")
-    return keyboard
-
-def transport_keyboard():
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add("1. Ковер-самолет", "2. Ослик Иа", "3. Пешком")
-    return keyboard
 
 @dp.message_handler(state=GameStates.choosing_weapon)
 async def choose_weapon(message: types.Message, state: FSMContext):
     choice = message.text
-    if choice == "1. Меч":
+    if choice == "1":
         game.weapon = "Меч"
-    elif choice == "2. Палка":
+    elif choice == "2":
         game.weapon = "Палка"
-    elif choice == "3. Пулемет":
+    elif choice == "3":
         game.weapon = "Пулемет"
     else:
-        await message.reply("Неправильный выбор. Пожалуйста, выберите оружие снова:", reply_markup=weapon_keyboard())
+        await message.reply("Неправильный выбор. Пожалуйста, введите номер, чтобы выбрать оружие:\n1. Меч\n2. Палка\n3. Пулемет")
         return
 
-    await message.reply(f"Вы выбрали: {game.weapon}. Теперь выберите броню:", reply_markup=armor_keyboard())
+    await message.reply(f"Вы выбрали: {game.weapon}. Теперь введите номер, чтобы выбрать броню:\n1. Полный латный доспех\n2. Костюм-тройка\n3. Дырявые трусы и носки")
     await GameStates.choosing_armor.set()
 
 @dp.message_handler(state=GameStates.choosing_armor)
 async def choose_armor(message: types.Message, state: FSMContext):
     choice = message.text
-    if choice == "1. Полный латный доспех":
+    if choice == "1":
         game.armor = "Полный латный доспех"
-    elif choice == "2. Костюм-тройка":
+    elif choice == "2":
         game.armor = "Костюм-тройка"
-    elif choice == "3. Дырявые трусы и носки":
+    elif choice == "3":
         game.armor = "Дырявые трусы и носки"
     else:
-        await message.reply("Неправильный выбор. Пожалуйста, выберите броню снова:", reply_markup=armor_keyboard())
+        await message.reply("Неправильный выбор. Пожалуйста, введите номер, чтобы выбрать броню:\n1. Полный латный доспех\n2. Костюм-тройка\n3. Дырявые трусы и носки")
         return
 
-    await message.reply(f"Вы выбрали: {game.armor}. Теперь выберите транспорт:", reply_markup=transport_keyboard())
+    await message.reply(f"Вы выбрали: {game.armor}. Теперь введите номер, чтобы выбрать транспорт:\n1. Ковер-самолет\n2. Ослик Иа\n3. Пешком")
     await GameStates.choosing_transport.set()
 
 @dp.message_handler(state=GameStates.choosing_transport)
 async def choose_transport(message: types.Message, state: FSMContext):
     choice = message.text
-    if choice == "1. Ковер-самолет":
+    if choice == "1":
         game.transport = "Ковер-самолет"
-    elif choice == "2. Ослик Иа":
+    elif choice == "2":
         game.transport = "Ослик Иа"
-    elif choice == "3. Пешком":
+    elif choice == "3":
         game.transport = "Пешком"
     else:
-        await message.reply("Неправильный выбор. Пожалуйста, выберите транспорт снова:", reply_markup=transport_keyboard())
+        await message.reply("Неправильный выбор. Пожалуйста, введите номер, чтобы выбрать транспорт:\n1. Ковер-самолет\n2. Ослик Иа\n3. Пешком")
         return
 
-    await message.reply(f"Вы выбрали: {game.transport}. Теперь отправляемся в путь!")
+    await message.reply(f"Вы выбрали: {game.transport}. Теперь отправляемся в путь! Введите номер для выбора пути.")
     await GameStates.choosing_path.set()
 
 @dp.message_handler(state=GameStates.choosing_path)
@@ -140,10 +85,7 @@ async def fight_dragon(message: types.Message):
     await end_game(message)
 
 async def end_game(message: types.Message):
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add("Да", "Нет")
-    await message.reply("Хотите сыграть снова?", reply_markup=keyboard)
-    await GameStates.end_game.set()
+    await message.reply("Хотите сыграть снова? Введите 'да' или 'нет'.")
 
 @dp.message_handler(lambda message: message.text.lower() == "да", state=GameStates.end_game)
 async def restart_game(message: types.Message, state: FSMContext):
@@ -152,8 +94,4 @@ async def restart_game(message: types.Message, state: FSMContext):
 @dp.message_handler(lambda message: message.text.lower() == "нет", state=GameStates.end_game)
 async def stop_game(message: types.Message, state: FSMContext):
     await state.finish()
-    await message.reply("Спасибо за игру!", reply_markup=types.ReplyKeyboardRemove())
-
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
-# 3 version
+    await message.reply("Спасибо за игру!")
